@@ -167,8 +167,10 @@ impl Drop for Process {
         unsafe {
             ClosePseudoConsole(self._console);
 
-            let _ = CloseHandle(self._proc.hProcess);
-            let _ = CloseHandle(self._proc.hThread);
+            if !self._proc.hProcess.is_invalid() {
+                let _ = CloseHandle(self._proc.hProcess);
+                let _ = CloseHandle(self._proc.hThread);
+            }
 
             DeleteProcThreadAttributeList(self._proc_info.lpAttributeList);
             let _: Box<u8> = Box::from_raw(self._proc_info.lpAttributeList.0 as *mut u8);
@@ -443,14 +445,16 @@ fn spawn_command(command: Command, size: Option<COORD>) -> Result<Process, Error
 
     let (mut console, output, input) = createPseudoConsole(size)?;
     let startup_info = initializeStartupInfoAttachedToConPTY(&mut console)?;
-    let proc = execProc(command, startup_info)?;
-    Ok(Process {
+    // Dropped when the program does not start, which frees the console.
+    let mut process = Process {
         input,
         output,
         _console: console,
-        _proc: proc,
+        _proc: PROCESS_INFORMATION::default(),
         _proc_info: startup_info,
-    })
+    };
+    process._proc = execProc(command, startup_info)?;
+    Ok(process)
 }
 
 fn resize_console(console: HPCON, x: i16, y: i16) -> Result<(), Error> {
