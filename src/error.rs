@@ -22,10 +22,10 @@ impl std::error::Error for Error {}
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Win(err) => writeln!(f, "Windows error: {}", err),
-            Self::Timeout(limit) => writeln!(f, "A timeout {:?} was reached", limit),
-            Self::WaitFailed(event_id) => writeln!(f, "Waiting failed. WAIT_EVENT: {:?}", event_id),
-            Self::InputClosed => writeln!(f, "The input is already closed"),
+            Self::Win(err) => write!(f, "Windows error: {}", err),
+            Self::Timeout(limit) => write!(f, "A timeout {:?} was reached", limit),
+            Self::WaitFailed(event_id) => write!(f, "Waiting failed. WAIT_EVENT: {:?}", event_id),
+            Self::InputClosed => write!(f, "The input is already closed"),
         }
     }
 }
@@ -55,5 +55,18 @@ impl From<Error> for std::io::Error {
                 format!("Waiting for process failed. WAIT_EVENT: {:?}", wait_event),
             ),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn messages_end_without_a_newline() {
+        assert_eq!(
+            Error::InputClosed.to_string(),
+            "The input is already closed"
+        );
     }
 }
